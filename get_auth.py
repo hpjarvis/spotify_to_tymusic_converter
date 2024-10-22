@@ -35,7 +35,7 @@ def get_access_token(auth_code: str):
 
 @app.get("/")
 async def auth():
-    scope = ["playlist-read-private", "playlist-read-collaborative"]
+    scope = ["playlist-read-private", "playlist-read-collaborative", "user-library-read"]
     auth_url = f"https://accounts.spotify.com/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope={' '.join(scope)}"
     return HTMLResponse(content=f'<a href="{auth_url}">Authorize</a>')
 

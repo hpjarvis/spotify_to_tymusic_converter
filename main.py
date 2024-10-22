@@ -58,6 +58,8 @@ callback = requests.get(endpoint, headers=headers)
 callback_json = callback.json()
 playlists = callback_json['items']
 
+print(callback_json)
+
 print("Requesting playlists from ytmusic account")
 yt_playlists = ytmusic.get_library_playlists()
 yt_playlist_names = [d['title'] for d in yt_playlists]
@@ -77,40 +79,26 @@ for playlist in playlists:
     print("'{}' ({}) - {} songs - extracted {}".format(playlist_name, playlist_id, total_tracks, len(playlist_tracks)))
     print("Making playlist on yt music")
 
-    playlist_id = ytmusic.create_playlist(playlist_name, "created using spotifyt tool by hpjarvis")
-
-    playlist_contents = {}
-    playlist_contents["name"] = playlist_name
-    playlist_contents["id"] = playlist_id
-    playlist_contents["number of tracks"] = total_tracks
-    playlist_contents["tracks"] = []
-
-    missing_items = {}
-    missing_items["name"] = playlist_name
-    missing_items["tracks"] = []
+    playlist_contents, missing_items, yt_playlist_id = helpers.create_youtube_playlist(ytmusic=ytmusic, total_tracks=total_tracks, playlist_name=playlist_name)
 
     for i in range(len(playlist_tracks)):
-        print("\t{} - {}".format(i + 1, playlist_tracks[i]))
-        search_results = ytmusic.search("{} {}".format(playlist_tracks[i]["Name"], playlist_tracks[i]["Artist"][0]), filter="songs", ignore_spelling=True)
-        
-        # append the tracks to the playlists_content tracks list
-        playlist_contents["tracks"].append({"Name": playlist_tracks[i]["Name"], "Artist": playlist_tracks[i]["Artist"][0]})
-
-        if search_results != []:
-            search_result = search_results[0]
-            print("\t\t YT Search: {} - {}".format(search_result['title'], search_result['artists'][0]['name']))
-
-            try:
-                ytmusic.add_playlist_items(playlist_id, [search_result['videoId']])
-
-            except:
-                print("Cannot add song - request timeout")
-    
-        else:
-            print("\t\tCannot be found")
-            missing_items["tracks"].append({"Name": playlist_tracks[i]["Name"], "Artist": playlist_tracks[i]["Artist"][0]})
+        helpers.search_and_add_track(ytmusic=ytmusic, index=i, playlist_id=yt_playlist_id, playlist_tracks=playlist_tracks, playlist_contents=playlist_contents, missing_items=missing_items)
 
     helpers.write_playlist_content(playlist_contents)
     helpers.write_playlist_content(missing_items, directory="./errors", missing_list=True)
 
-    
+print("Getting liked songs")
+liked_endpoint = "https://api.spotify.com/v1/me/tracks?market=GB&limit=50&offset=0"
+total_tracks, playlist_tracks = helpers.get_all_tracks(tracks_endpoint=liked_endpoint, headers=headers, playlist_tracks=[])
+
+playlist_name = "Liked Songs"
+playlist_contents, missing_items, yt_playlist_id = helpers.create_youtube_playlist(ytmusic=ytmusic, total_tracks=total_tracks, playlist_name=playlist_name)
+
+print("'{}' - {} songs - extracted {}".format(playlist_name, total_tracks, len(playlist_tracks)))
+print("Making playlist on yt music")
+
+for i in range(len(playlist_tracks)):
+    helpers.search_and_add_track(ytmusic=ytmusic, index=i, playlist_id=yt_playlist_id, playlist_tracks=playlist_tracks, playlist_contents=playlist_contents, missing_items=missing_items)
+
+helpers.write_playlist_content(playlist_contents)
+helpers.write_playlist_content(missing_items, directory="./errors", missing_list=True)

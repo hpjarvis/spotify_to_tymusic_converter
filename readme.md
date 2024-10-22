@@ -19,4 +19,4 @@ Windows:
 
 ### Run Script
 
-`python3 main.py`
+`python main.py`
